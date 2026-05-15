@@ -251,6 +251,19 @@ def _traffic_popup_html(row):
 
 
 
+
+def _limit_geojson_features(geojson, limit=420):
+    try:
+        if not geojson or not geojson.get("features"):
+            return geojson
+        features = geojson.get("features", [])
+        if len(features) <= limit:
+            return geojson
+        return {"type": "FeatureCollection", "features": features[:limit]}
+    except Exception:
+        return geojson
+
+
 def build_live_map(
     cameras: pd.DataFrame,
     quakes: pd.DataFrame,
@@ -267,7 +280,7 @@ def build_live_map(
     show_weather=False,
     show_places=False,
     show_rivers=False,
-    show_exact_roads=True,
+    show_exact_roads=False,
     show_school=True,
 ):
     # Vegir þurfa að sjást vel í umferðarham. OpenStreetMap er því sjálfgefið grunnkort.

@@ -10,13 +10,13 @@ import requests
 import streamlit as st
 
 
+MAX_TOTAL_ROAD_FEATURES = 650
+MAX_FEATURES_PER_ROAD = 140
+
 ROAD_ARCGIS_LAYER = "https://vegasja.vegagerdin.is/arcgis/rest/services/data/vegakerfi/MapServer/6/query"
 
 # Main road numbers to fetch first. This keeps the layer usable and not too heavy.
-DEFAULT_ROAD_NUMBERS = [
-    1, 35, 36, 37, 38, 39, 41, 42, 43, 54, 60, 61, 68, 76, 82, 85, 87, 92, 93, 94, 96,
-    208, 254, 427, 550, 862, 939
-]
+DEFAULT_ROAD_NUMBERS = [1, 35, 36, 37, 38, 39, 41, 42, 43, 54, 60, 61, 76, 82, 85, 92, 96, 254, 427, 550]
 
 ROAD_CLASS = {
     1: "Stofnvegur",
@@ -73,7 +73,7 @@ def _decode(value, lookup: dict, default=""):
     return lookup.get(i, str(i))
 
 
-def _query_road_number(road_number: int, max_records: int = 1600) -> dict[str, Any] | None:
+def _query_road_number(road_number: int, max_records: int = MAX_FEATURES_PER_ROAD) -> dict[str, Any] | None:
     params = {
         "f": "geojson",
         "where": f"NUMVEGUR = {int(road_number)}",
@@ -138,11 +138,15 @@ def get_road_network(road_numbers: list[int] | None = None) -> tuple[dict[str, A
     attempts = []
 
     for road in road_numbers:
+        if len(features) >= MAX_TOTAL_ROAD_FEATURES:
+            break
         try:
             data = _query_road_number(road)
             if data and data.get("features"):
-                for f in data["features"]:
+                for f in data["features"][:MAX_FEATURES_PER_ROAD]:
                     features.append(_enrich_feature(f))
+                    if len(features) >= MAX_TOTAL_ROAD_FEATURES:
+                        break
         except Exception as e:
             attempts.append(f"Vegur {road}: {e}")
 

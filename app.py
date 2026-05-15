@@ -46,7 +46,7 @@ from ui.travel_advisor import render_travel_advisor
 
 
 st.set_page_config(
-    page_title="Ísland hér búum við v4.3.2.1",
+    page_title="Ísland hér búum við v4.3.1.2.1",
     page_icon="🏫",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -159,7 +159,7 @@ section[data-testid="stSidebar"] .stButton>button:hover{
     border:1px solid #bfdbfe !important;
 }
 
-/* v4.3.2 Deployment Ready for Render — flokkuð valmynd */
+/* v4.3.1.2 Kort Performance Fix — flokkuð valmynd */
 section[data-testid="stSidebar"] details {
     background: rgba(255,255,255,.78);
     border: 1px solid #dbe7f5;
@@ -261,7 +261,7 @@ with st.sidebar:
                     st.rerun()
 
     st.divider()
-    st.info("🏫 Vallaskóli Live Lab\n\nIceland Command Center\n\nv4.3.2\n\nKennsluútgáfa + flokkuð valmynd")
+    st.info("🏫 Vallaskóli Live Lab\n\nIceland Command Center\n\nv4.3.1.2\n\nKennsluútgáfa + flokkuð valmynd")
 
 selected_page = st.session_state["selected_page"]
 
@@ -269,7 +269,7 @@ h1, h2 = st.columns([0.74, 0.26])
 with h1:
     st.markdown("""
     <div class="hero-card">
-      <div class="hero-title">🇮🇸 Ísland hér búum við <span class="version-badge">v4.3.2</span></div>
+      <div class="hero-title">🇮🇸 Ísland hér búum við <span class="version-badge">v4.3.1.2</span></div>
       <div class="hero-subtitle">Kennsluútgáfa — lifandi gögn, landafræði, verkefni, leikir og kennaratól á einum stað.</div>
     </div>
     """, unsafe_allow_html=True)
@@ -341,7 +341,7 @@ def render_map_and_status():
         show_places = c5.toggle("🏘️ Staðir og bæir", value=True, key="map_toggle_places")
         show_rivers = c6.toggle("💧 Ár/farvegir", value=True, key="map_toggle_rivers")
         show_traffic_counters = c7.toggle("🚦 Umferðartölur", value=False, key="map_toggle_traffic_counters")
-        show_exact_roads = st.toggle("🛣️ Nákvæmari vegalínur", value=True, key="map_toggle_exact_roads")
+        show_exact_roads = st.toggle("🛣️ Nákvæmari vegalínur", value=False, key="map_toggle_exact_roads", help="Þetta lag getur verið þungt á Render. Kveiktu aðeins þegar þú þarft það.")
         show_school = st.toggle("🏫 Vallaskóli", value=True, key="map_toggle_school")
 
         m = build_live_map(
@@ -509,7 +509,7 @@ st.divider()
 
 st.subheader("🏫 Verkefnahugmyndir fyrir kennslu")
 st.write("""
-**Live Lab v4.3.2** er grunnurinn að stærra kerfi. Nú er búið að aðskilja gögn, kort og viðmót svo auðvelt sé að bæta við næstu einingum.
+**Live Lab v4.3.1.2** er grunnurinn að stærra kerfi. Nú er búið að aðskilja gögn, kort og viðmót svo auðvelt sé að bæta við næstu einingum.
 
 Næst getum við bætt við:
 1. Mission Mode fyrir nemendur.

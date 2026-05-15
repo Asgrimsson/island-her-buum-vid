@@ -11,6 +11,9 @@ import streamlit as st
 from services.road_network import road_style
 
 
+MAX_SOUTH_ROAD_FEATURES = 750
+MAX_FEATURES_PER_QUERY = 140
+
 SOUTH_ROAD_NUMBERS = [
     # Stærstu leiðir sem skipta Vallaskóla/Selfoss og Suðurland miklu máli.
     1,      # Hringvegur / Suðurlandsvegur
@@ -112,7 +115,7 @@ SOUTH_ROUTE_GUIDE = [
 ]
 
 
-def _query_where(where: str, max_records: int = 2000) -> dict[str, Any] | None:
+def _query_where(where: str, max_records: int = MAX_FEATURES_PER_QUERY) -> dict[str, Any] | None:
     params = {
         "f": "geojson",
         "where": where,
@@ -179,11 +182,13 @@ def get_south_road_network() -> tuple[dict[str, Any], pd.DataFrame, bool, str]:
     # 1. Fetch by road numbers, then filter to South Iceland bbox.
     for road in SOUTH_ROAD_NUMBERS:
         try:
-            data = _query_where(f"NUMVEGUR = {int(road)}", max_records=1200)
+            data = _query_where(f"NUMVEGUR = {int(road)}", max_records=MAX_FEATURES_PER_QUERY)
             if data and data.get("features"):
                 for f in data["features"]:
                     if _inside_south_feature(f):
                         features.append(_enrich(f))
+                        if len(features) >= MAX_SOUTH_ROAD_FEATURES:
+                            break
         except Exception as e:
             attempts.append(f"Vegur {road}: {e}")
 
@@ -191,11 +196,13 @@ def get_south_road_network() -> tuple[dict[str, Any], pd.DataFrame, bool, str]:
     terms = ["Suðurlandsvegur", "Hringvegur", "Þingvallavegur", "Biskupstungnabraut", "Landeyjahafnarvegur", "Þrengslavegur", "Suðurstrandavegur", "Þorlákshafnarvegur"]
     for term in terms:
         try:
-            data = _query_where(f"UPPER(KAFLIVEGURHEITI) LIKE UPPER('%{term}%')", max_records=1000)
+            data = _query_where(f"UPPER(KAFLIVEGURHEITI) LIKE UPPER('%{term}%')", max_records=MAX_FEATURES_PER_QUERY)
             if data and data.get("features"):
                 for f in data["features"]:
                     if _inside_south_feature(f):
                         features.append(_enrich(f))
+                        if len(features) >= MAX_SOUTH_ROAD_FEATURES:
+                            break
         except Exception as e:
             attempts.append(f"Heiti {term}: {e}")
 
