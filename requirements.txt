@@ -1,0 +1,10 @@
+streamlit
+pandas
+requests
+folium
+streamlit-folium
+pyproj
+beautifulsoup4
+lxml
+html5lib
+openpyxl
