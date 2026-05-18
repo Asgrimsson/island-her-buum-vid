@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 import streamlit as st
+import pandas as pd
 from streamlit_folium import st_folium
 
 from services.cameras import get_cameras
@@ -46,11 +47,49 @@ from ui.travel_advisor import render_travel_advisor
 
 
 st.set_page_config(
-    page_title="Ísland hér búum við v4.3.1.2.1",
+    page_title="Ísland hér búum við v4.3.2",
     page_icon="🏫",
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+
+# v4.3.2 Speed Mode helpers
+def _lazy_enabled(key: str, default: bool = False) -> bool:
+    return bool(st.session_state.get(key, default))
+
+def _request_layer(key: str) -> None:
+    st.session_state[key] = True
+
+def _reset_heavy_layers() -> None:
+    for k in ["lazy_cameras", "lazy_quakes", "lazy_traffic_counters", "lazy_rivers", "lazy_exact_roads", "lazy_weather"]:
+        st.session_state[k] = False
+
+def _empty_df():
+    return pd.DataFrame([])
+
+st.markdown("""
+<style>
+/* v4.3.2 Speed Mode */
+[data-testid="stVerticalBlock"] iframe { max-width: 100% !important; }
+.speed-toolbar {
+    background: #ffffff;
+    border: 1px solid #dbe7f5;
+    border-radius: 18px;
+    padding: 12px 14px;
+    margin: 10px 0 14px 0;
+    box-shadow: 0 8px 24px rgba(15,23,42,.05);
+}
+.speed-hint {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e3a8a;
+    border-radius: 14px;
+    padding: 10px 12px;
+    margin: 8px 0;
+}
+</style>
+""", unsafe_allow_html=True)
 
 
 
@@ -159,7 +198,7 @@ section[data-testid="stSidebar"] .stButton>button:hover{
     border:1px solid #bfdbfe !important;
 }
 
-/* v4.3.1.2 Kort Performance Fix — flokkuð valmynd */
+/* v4.3.2 Speed Mode + Lazy Layers — flokkuð valmynd */
 section[data-testid="stSidebar"] details {
     background: rgba(255,255,255,.78);
     border: 1px solid #dbe7f5;
@@ -261,7 +300,7 @@ with st.sidebar:
                     st.rerun()
 
     st.divider()
-    st.info("🏫 Vallaskóli Live Lab\n\nIceland Command Center\n\nv4.3.1.2\n\nKennsluútgáfa + flokkuð valmynd")
+    st.info("🏫 Vallaskóli Live Lab\n\nIceland Command Center\n\nv4.3.2\n\nKennsluútgáfa + flokkuð valmynd")
 
 selected_page = st.session_state["selected_page"]
 
@@ -269,7 +308,7 @@ h1, h2 = st.columns([0.74, 0.26])
 with h1:
     st.markdown("""
     <div class="hero-card">
-      <div class="hero-title">🇮🇸 Ísland hér búum við <span class="version-badge">v4.3.1.2</span></div>
+      <div class="hero-title">🇮🇸 Ísland hér búum við <span class="version-badge">v4.3.2</span></div>
       <div class="hero-subtitle">Kennsluútgáfa — lifandi gögn, landafræði, verkefni, leikir og kennaratól á einum stað.</div>
     </div>
     """, unsafe_allow_html=True)
@@ -281,23 +320,46 @@ with h2:
     </div>
     """, unsafe_allow_html=True)
 
-with st.spinner("Sæki lifandi gögn..."):
-    cameras, cam_fallback, cam_msg = get_cameras()
-    quakes, quake_fallback, quake_msg = get_earthquakes()
-    weather, weather_fallback, weather_msg = get_weather()
+# v4.3.2 Speed Mode: sækjum bara þau gögn sem þarf fyrir valda síðu og virk lög.
+need_map = selected_page in ["📍 Staðan núna", "🗺️ Íslandskort"]
+need_cameras = need_map and _lazy_enabled("lazy_cameras") or selected_page in ["📈 Gagnaheilsa", "🎒 Verkefnaleiðangur", "🤖 Verkefnasmiður", "📦 Útflutningur í Classroom", "🧭 Gagnaskoðari", "🌋 Jarðskjálftabrú", "🧭 Ferðaleiðangur", "🎯 Landafræðiáskorun", "📄 Skýrslur", "🧭 Ferðaráð Vallaskóla"]
+need_quakes = need_map and _lazy_enabled("lazy_quakes") or selected_page in ["📈 Gagnaheilsa", "🎒 Verkefnaleiðangur", "🤖 Verkefnasmiður", "📦 Útflutningur í Classroom", "🧭 Gagnaskoðari", "🌋 Jarðskjálftabrú", "📄 Skýrslur", "🧪 Skjálftaprófun"]
+need_weather = need_map and _lazy_enabled("lazy_weather") or selected_page in ["🧭 Ferðaleiðangur", "🎯 Landafræðiáskorun", "🧭 Ferðaráð Vallaskóla", "🌋 Jarðskjálftabrú", "📈 Gagnaheilsa", "🧭 Gagnaskoðari"]
+need_traffic_counters = need_map and _lazy_enabled("lazy_traffic_counters") or selected_page in ["🚦 Umferðartölur", "🛣️ Suðurlandsvegir", "🧭 Ferðaráð Vallaskóla"]
+need_roads = need_map and _lazy_enabled("lazy_exact_roads") or selected_page in ["🛣️ Vegir og leiðir", "🧭 Ferðaráð Vallaskóla"]
+need_south_roads = selected_page in ["🛣️ Suðurlandsvegir", "🧭 Ferðaráð Vallaskóla"]
+need_hydro = need_map and _lazy_enabled("lazy_rivers") or selected_page in ["💧 Vatnafar og ár"]
+need_hagstofa = selected_page in ["📊 Hagstofugögn", "📈 Byggðaþróun", "🏘️ Staðir og bæir", "🎯 Landafræðiáskorun", "🧭 Ferðaleiðangur"]
+need_trends = selected_page in ["📈 Byggðaþróun"]
+need_weather_texts = selected_page in ["🌋 Jarðskjálftabrú", "📈 Gagnaheilsa"]
+
+with st.spinner("Sæki nauðsynleg gögn..."):
     traffic, traffic_fallback, traffic_msg = get_traffic()
-    traffic_counters, traffic_counters_fallback, traffic_counters_msg = get_traffic_counters()
-    road_network, road_df, road_fallback, road_msg = get_road_network()
-    south_road_network, south_road_df, south_road_fallback, south_road_msg = get_south_road_network()
     alerts, alert_fallback, alert_msg = get_alerts()
-    weather_texts, weather_texts_fallback, weather_texts_msg = get_weather_texts()
-    hydro_live, rivers, hydro_fallback, hydro_msg = get_hydrology()
-    river_lines = get_river_lines()
     places = get_places()
-    hagstofa_population, hagstofa_fallback, hagstofa_msg = get_hagstofa_population()
-    places = apply_population_to_places(places, hagstofa_population)
-    hagstofa_trends, trends_fallback, trends_msg = get_hagstofa_population_trends()
-    place_trends = build_place_trends(places, hagstofa_trends)
+
+    cameras, cam_fallback, cam_msg = (get_cameras() if need_cameras else (_empty_df(), True, "Speed Mode: myndavélar ekki sóttar fyrr en beðið er um þær."))
+    quakes, quake_fallback, quake_msg = (get_earthquakes() if need_quakes else (_empty_df(), True, "Speed Mode: skjálftar ekki sóttir fyrr en beðið er um þá."))
+    weather, weather_fallback, weather_msg = (get_weather() if need_weather else (_empty_df(), True, "Speed Mode: veðurlag á korti ekki sótt fyrr en beðið er um það."))
+    traffic_counters, traffic_counters_fallback, traffic_counters_msg = (get_traffic_counters() if need_traffic_counters else (_empty_df(), True, "Speed Mode: umferðarteljarar ekki sóttir fyrr en beðið er um þá."))
+    road_network, road_df, road_fallback, road_msg = (get_road_network() if need_roads else (None, _empty_df(), True, "Speed Mode: nákvæmar vegalínur ekki sóttar fyrr en beðið er um þær."))
+    south_road_network, south_road_df, south_road_fallback, south_road_msg = (get_south_road_network() if need_south_roads else (None, _empty_df(), True, "Speed Mode: Suðurlandsvegir ekki sóttir fyrr en farið er á þá síðu."))
+    weather_texts, weather_texts_fallback, weather_texts_msg = (get_weather_texts() if need_weather_texts else (_empty_df(), True, "Speed Mode: textaspár ekki sóttar á þessari síðu."))
+    hydro_live, rivers, hydro_fallback, hydro_msg = (get_hydrology() if need_hydro else (_empty_df(), _empty_df(), True, "Speed Mode: vatnafar ekki sótt fyrr en beðið er um það."))
+    river_lines = (get_river_lines() if need_hydro or (need_map and _lazy_enabled("lazy_rivers")) else _empty_df())
+
+    if need_hagstofa:
+        hagstofa_population, hagstofa_fallback, hagstofa_msg = get_hagstofa_population()
+        places = apply_population_to_places(places, hagstofa_population)
+    else:
+        hagstofa_population, hagstofa_fallback, hagstofa_msg = _empty_df(), True, "Speed Mode: Hagstofugögn ekki sótt fyrr en farið er í landafræði/Hagstofu síður."
+
+    if need_trends:
+        hagstofa_trends, trends_fallback, trends_msg = get_hagstofa_population_trends()
+        place_trends = build_place_trends(places, hagstofa_trends)
+    else:
+        hagstofa_trends, trends_fallback, trends_msg = _empty_df(), True, "Speed Mode: byggðaþróun ekki sótt fyrr en farið er á Byggðaþróun."
+        place_trends = _empty_df()
 
 statuses = {
     "📷 Myndavélar": (cam_fallback, cam_msg),
@@ -329,30 +391,48 @@ def render_map_and_status():
 
     with left:
         st.markdown('<div class="command-map">', unsafe_allow_html=True)
-        st.subheader("🗺️ Iceland Command Map")
+        st.subheader("🗺️ Íslandskort — létt stilling")
+        st.caption("Speed Mode: aðalkortið hleður hratt. Þung lög eru sótt með hnöppum þegar þú þarft þau.")
+
+        st.markdown('<div class="speed-toolbar">', unsafe_allow_html=True)
+        st.markdown("#### ⚡ Sækja þung kortalög eftir þörfum")
+        b1, b2, b3, b4, b5, b6 = st.columns(6)
+        if b1.button("📷 Myndavélar", use_container_width=True):
+            _request_layer("lazy_cameras"); st.rerun()
+        if b2.button("🌋 Skjálftar", use_container_width=True):
+            _request_layer("lazy_quakes"); st.rerun()
+        if b3.button("🚦 Umferð", use_container_width=True):
+            _request_layer("lazy_traffic_counters"); st.rerun()
+        if b4.button("💧 Vatnafar", use_container_width=True):
+            _request_layer("lazy_rivers"); st.rerun()
+        if b5.button("🛣️ Vegalínur", use_container_width=True):
+            _request_layer("lazy_exact_roads"); st.rerun()
+        if b6.button("🧹 Létt kort", use_container_width=True):
+            _reset_heavy_layers(); st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
         c1, c2, c3, c4 = st.columns(4)
-        show_cameras = c1.toggle("📷 Myndavélar", value=True, key="map_toggle_cameras")
-        show_quakes = c2.toggle("🌋 Skjálftar", value=True, key="map_toggle_quakes")
+        show_cameras = c1.toggle("📷 Myndavélar", value=_lazy_enabled("lazy_cameras"), key="map_toggle_cameras")
+        show_quakes = c2.toggle("🌋 Skjálftar", value=_lazy_enabled("lazy_quakes"), key="map_toggle_quakes")
         show_traffic = c3.toggle("🚗 Færð", value=True, key="map_toggle_traffic")
-        show_weather = c4.toggle("🌦️ Veður", value=False, key="map_toggle_weather")
+        show_weather = c4.toggle("🌦️ Veður", value=_lazy_enabled("lazy_weather"), key="map_toggle_weather")
 
         c5, c6, c7 = st.columns(3)
         show_places = c5.toggle("🏘️ Staðir og bæir", value=True, key="map_toggle_places")
-        show_rivers = c6.toggle("💧 Ár/farvegir", value=True, key="map_toggle_rivers")
-        show_traffic_counters = c7.toggle("🚦 Umferðartölur", value=False, key="map_toggle_traffic_counters")
-        show_exact_roads = st.toggle("🛣️ Nákvæmari vegalínur", value=False, key="map_toggle_exact_roads", help="Þetta lag getur verið þungt á Render. Kveiktu aðeins þegar þú þarft það.")
+        show_rivers = c6.toggle("💧 Ár/farvegir", value=_lazy_enabled("lazy_rivers"), key="map_toggle_rivers")
+        show_traffic_counters = c7.toggle("🚦 Umferðartölur", value=_lazy_enabled("lazy_traffic_counters"), key="map_toggle_traffic_counters")
+        show_exact_roads = st.toggle("🛣️ Nákvæmari vegalínur", value=_lazy_enabled("lazy_exact_roads"), key="map_toggle_exact_roads", help="Þungt lag. Sæktu það fyrst með hnappnum Vegalínur.")
         show_school = st.toggle("🏫 Vallaskóli", value=True, key="map_toggle_school")
 
         m = build_live_map(
-            cameras=cameras,
-            quakes=quakes,
+            cameras=cameras if show_cameras else _empty_df(),
+            quakes=quakes if show_quakes else _empty_df(),
             traffic=traffic,
-            traffic_counters=traffic_counters,
-            weather=weather,
+            traffic_counters=traffic_counters if show_traffic_counters else _empty_df(),
+            weather=weather if show_weather else _empty_df(),
             places=places,
-            river_lines=river_lines,
-            road_network=road_network,
+            river_lines=river_lines if show_rivers else _empty_df(),
+            road_network=road_network if show_exact_roads else None,
             show_cameras=show_cameras,
             show_quakes=show_quakes,
             show_traffic=show_traffic,
@@ -363,7 +443,12 @@ def render_map_and_status():
             show_exact_roads=show_exact_roads,
             show_school=show_school,
         )
-        st_folium(m, width=None, height=720, returned_objects=[])
+        try:
+            st_folium(m, width=None, height=680, returned_objects=[])
+        except Exception as e:
+            st.error("Kortið varð of þungt eða gagnalag bilaði í þessari keyrslu.")
+            st.info("Smelltu á Létt kort eða slökktu á þungum lögum og reyndu aftur.")
+            st.code(str(e))
         st.markdown("</div>", unsafe_allow_html=True)
 
     with right:
@@ -509,7 +594,7 @@ st.divider()
 
 st.subheader("🏫 Verkefnahugmyndir fyrir kennslu")
 st.write("""
-**Live Lab v4.3.1.2** er grunnurinn að stærra kerfi. Nú er búið að aðskilja gögn, kort og viðmót svo auðvelt sé að bæta við næstu einingum.
+**Live Lab v4.3.2** er grunnurinn að stærra kerfi. Nú er búið að aðskilja gögn, kort og viðmót svo auðvelt sé að bæta við næstu einingum.
 
 Næst getum við bætt við:
 1. Mission Mode fyrir nemendur.

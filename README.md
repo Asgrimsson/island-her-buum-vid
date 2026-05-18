@@ -1,20 +1,21 @@
-# Ísland hér búum við v4.3.1 — Kort Performance Fix
+# Ísland hér búum við v4.3.2 — Speed Mode + Lazy Layers
 
-Þessi útgáfa minnkar líkur á `Connection failed with status 502` á Render þegar kveikt/slökkt er á kortalögum.
+Þessi útgáfa gerir vefinn hraðari og minnkar líkur á 502 villum á Render.
 
-## Lagað
+## Nýtt
 
-- Nákvæmar vegalínur eru sjálfgefið slökktar á aðalkortinu.
-- Vegalínur eru takmarkaðar áður en þær eru teiknaðar.
-- Road Network og Suðurlandsvegir sækja færri vegkafla í einu.
-- Kortateikning er varin svo eitt þungt lag felli ekki allan vefinn.
+- Aðalkortið hleður léttari lögum sjálfgefið.
+- Þung lög eru sótt eftir þörfum.
+- Nýr hnappur: `Létt kort`.
+- Færri punktar/línur eru teiknaðar í einu.
+- Gögn eru sótt skilyrt eftir valinni síðu.
 
-## Uppfæra Render
+## Uppfærsla
+
+Sjá `UPPFAERSLA_V432.md`.
 
 ```bash
 git add .
-git commit -m "Kort performance fix"
+git commit -m "Speed mode lazy layers"
 git push
 ```
-
-Render deployar sjálfkrafa.

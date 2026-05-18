@@ -264,6 +264,15 @@ def _limit_geojson_features(geojson, limit=420):
         return geojson
 
 
+def _limit_df(df, limit=250):
+    try:
+        if df is None or df.empty:
+            return df
+        return df.head(limit)
+    except Exception:
+        return df
+
+
 def build_live_map(
     cameras: pd.DataFrame,
     quakes: pd.DataFrame,
@@ -273,8 +282,8 @@ def build_live_map(
     places: pd.DataFrame | None = None,
     river_lines: pd.DataFrame | None = None,
     road_network: dict | None = None,
-    show_cameras=True,
-    show_quakes=True,
+    show_cameras=False,
+    show_quakes=False,
     show_traffic=True,
     show_traffic_counters=False,
     show_weather=False,
@@ -350,7 +359,7 @@ def build_live_map(
 
     if show_weather and not weather.empty:
         layer = folium.FeatureGroup(name="🌦️ Veðurstöðvar", show=False)
-        for _, row in weather.iterrows():
+        for _, row in _limit_df(weather, 80).iterrows():
             try:
                 lat, lon = float(row["lat"]), float(row["lon"])
             except Exception:
@@ -462,7 +471,7 @@ def build_live_map(
 
     if show_rivers and river_lines is not None and not river_lines.empty:
         layer = folium.FeatureGroup(name="💧 Ár / farvegir", show=True)
-        for _, row in river_lines.iterrows():
+        for _, row in _limit_df(river_lines, 140).iterrows():
             coords = row.get("coords")
             if not coords:
                 continue
